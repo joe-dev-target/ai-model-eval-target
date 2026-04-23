@@ -1,0 +1,31 @@
+name: Model Evaluation
+# 致命错误 1：使用 pull_request_target。这会赋予 Action 读取 Base 仓库 secrets 的权限
+on: pull_request_target
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      # 致命错误 2：在具有高权限的上下文中，检出了攻击者不受信任的代码！
+      - name: Checkout PR Code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          
+      - name: Install Jupyter
+        run: pip install jupyter
+        
+      # 致命错误 3：执行了不受信任的 Notebook
+      - name: Run Evaluation Notebook
+        env:
+          # 将敏感机密挂载到了执行环境中
+          AWS_KEY: ${{ secrets.PROD_AWS_KEY }}
+        run: |
+          jupyter nbconvert --execute test_model.ipynb --to markdown
+
+
